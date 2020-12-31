@@ -1,12 +1,16 @@
 import datetime
+import html
 import textwrap
+
+import bs4
 import jikanpy
 import requests
 from telegram.utils.helpers import mention_html
 from tg_bot import OWNER_ID, SUDO_USERS, REDIS, dispatcher
 from tg_bot.modules.disable import DisableAbleCommandHandler
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, ParseMode)
-from telegram.ext import CallbackQueryHandler, run_async
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup, ParseMode,
+                      Update)
+from telegram.ext import CallbackContext, CallbackQueryHandler, run_async
 
 info_btn = "More Information"
 prequel_btn = "⬅️"
@@ -41,9 +45,10 @@ def t(milliseconds: int) -> str:
 
 
 airing_query = '''
-    query ($id: Int,$search: String) { 
-      Media (id: $id, type: ANIME,search: $search) { 
+    query ($id: Int,$search: String) {
+      Media (id: $id, type: ANIME,search: $search) {
         id
+        siteUrl
         episodes
         title {
           romaji
@@ -54,7 +59,7 @@ airing_query = '''
            airingAt
            timeUntilAiring
            episode
-        } 
+        }
       }
     }
     '''
@@ -159,7 +164,7 @@ def airing(update, context):
     search_str = message.text.split(' ', 1)
     if len(search_str) == 1:
         update.effective_message.reply_text(
-            'Tell Anime Name :) ( /airing <anime name>)')
+            'Fromat : /airing <anime name>)')
         return
     variables = {'search': search_str[1]}
     response = requests.post(
@@ -167,7 +172,9 @@ def airing(update, context):
             'query': airing_query,
             'variables': variables
         }).json()['data']['Media']
-    msg = f"*Name*: *{response['title']['romaji']}*(`{response['title']['native']}`)\n*ID*: `{response['id']}`"
+    info = response.get('siteUrl')
+    image = info.replace('anilist.co/anime/', 'img.anili.st/media/')
+    msg = f"*Name*: *{response['title']['romaji']}*(`{response['title']['native']}`)\n*ID*: `{response['id']}`[⁠ ⁠]({image})"
     if response['nextAiringEpisode']:
         time = response['nextAiringEpisode']['timeUntilAiring'] * 1000
         time = t(time)
@@ -185,7 +192,8 @@ def anime(update, context):
     if len(search) == 1:
         update.effective_message.reply_text('Format : /anime < anime name >')
         return
-    search = search[1]
+    else:
+        search = search[1]
     variables = {'search': search}
     json = requests.post(
         url, json={
@@ -217,7 +225,7 @@ def anime(update, context):
         description = json.get('description', 'N/A').replace('<i>', '').replace(
             '</i>', '').replace('<br>', '')
         msg += shorten(description, info)
-        image = json.get('bannerImage', None)
+        image = info.replace('anilist.co/anime/', 'img.anili.st/media/')
         if trailer:
             buttons = [[
                 InlineKeyboardButton("More Info", url=info),
@@ -675,10 +683,6 @@ Get information about anime, manga or characters from [AniList](anilist.co).
  - /user <user>: returns information about a MyAnimeList user.
  - /upcoming: returns a list of new anime in the upcoming seasons.
  - /airing <anime>: returns anime airing info.
- - /imdb : check imdb score of anime or movies.
- - /ganime <anime> : search an anime on gogoanime
- - /kaizoku <anime>:search an anime on animekaizoku.com
- - /kayo <anime> : search an anime on animekayo.com
  - /watchlist: to get your saved watchlist.
  - /mangalist: to get your saved manga read list.
  - /characterlist | fcl: to get your favorite characters list.

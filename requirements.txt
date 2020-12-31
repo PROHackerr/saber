@@ -1,6 +1,7 @@
 future
 redis
 cachetools
+fontTools
 emoji
 tswift
 pybase64
@@ -18,6 +19,7 @@ python-telegram-bot==12.8
 psycopg2-binary
 spongemock
 nudepy==0.5.1
+bing_image_downloader
 zalgo-text
 geopy
 nltk
@@ -34,7 +36,7 @@ regex
 bleach
 git+https://github.com/starry69/python-markdown2.git
 wikipedia
-telethon==1.17.5
+telethon==1.16.4
 spamwatch
 alphabet_detector
 pyrate-limiter
